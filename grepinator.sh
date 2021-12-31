@@ -15,6 +15,7 @@ IPSET_GREPINATOR_TMP=${IPSET_GREPINATOR}-tmp
 IPSET_BLACKLIST_NAME="grepinatorBL"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 MAXELEM=131072
+TIMEOUT="10800" # 3 hours
 BLACKLISTS=(
     "https://www.projecthoneypot.org/list_of_ips.php?t=d&rss=1" # Project Honey Pot Directory of Dictionary Attacker IPs
 #   "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
@@ -27,12 +28,26 @@ BLACKLISTS=(
 #   "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/stopforumspam_7d.ipset" # Stopforumspam via Firehol
 )
 ####################################################
+banner () {
+echo '
+____ ____ ____ ___  _ _  _ ____ ___ ____ ____
+| __ |__/ |___ |__] | |\ | |__|  |  |  | |__/
+|__] |  \ |___ |    | | \| |  |  |  |__| |  \
+
+'
+}
+
 
 prereqs () {
 
 IPTABLES=`whereis iptables | awk '{print $2}'`
 IPSET=`whereis ipset | awk '{print $2}'`
 CURL=`whereis curl | awk '{print $2}'`
+
+	if [ "$EUID" -ne 0 ]
+		then echo "Please run as root"
+		exit 1;
+	fi
 
         if [ ! -f "$IPSET" ]; then
                 echo " [!] ipset not found. Please install ipset..";
@@ -89,15 +104,15 @@ grepinator () {
 	echo "Grepinating filters..."
 		for FILTER in $(ls -1 $FILTERDIR)
 			do
-				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout 10800 2>/dev/null; done
+				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null; done
 			done
 
+	sleep 3 # wait for list to generate
 	ENTRIES=`ipset list grepinator | grep "Number of entries" | awk '{print $NF}'`
 	echo  "Number of attacks found using filters: $ENTRIES"
-	echo "Adding $ENTRIES IP's to Grepinators firewall"
 	ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
 	ipset destroy $IPSET_GREPINATOR_TMP
-
+	echo "Added $ENTRIES IP's to Grepinators firewall"
 }
 
 blacklist_ips () {
@@ -124,13 +139,15 @@ IP_BLACKLIST_TMP=$(mktemp)
 	for IP in $(cat $IP_BLACKLIST_TMP)
 		do
 			echo -ne "Blocking IP $IP     "\\r
-			ipset add $IPSET_TMP_BLACKLIST_NAME $IP timeout 10800 2>/dev/null
+			ipset add $IPSET_TMP_BLACKLIST_NAME $IP timeout ${TIMEOUT:-10800} 2>/dev/null
 		done
 	ipset swap $IPSET_TMP_BLACKLIST_NAME $IPSET_BLACKLIST_NAME
 	ipset destroy $IPSET_TMP_BLACKLIST_NAME
-	echo "Adding $ENTRIES IP's to Grepinators BL firewall"
+	echo "Added $ENTRIES IP's to Grepinators BL firewall"
 	rm $IP_BLACKLIST_TMP
 }
+
+banner
 
 # Make sure we have the right tools
 prereqs
