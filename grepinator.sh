@@ -69,14 +69,14 @@ CURL=`whereis curl | awk '{print $2}'`
 
 ipset_setup () {
 
-	if ! ipset list -n | grep -q "$IPSET_GREPINATOR"; then
+	if ! ipset list -n | grep -eq "^$IPSET_GREPINATOR$"; then
 		if ! ipset create "$IPSET_GREPINATOR" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
 		fi
 	fi
 
-	if ! ipset list -n | grep -q "$IPSET_BLACKLIST_NAME"; then
+	if ! ipset list -n | grep -eq "^$IPSET_BLACKLIST_NAME$"; then
 		if ! ipset create "$IPSET_BLACKLIST_NAME" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
@@ -108,8 +108,7 @@ grepinator () {
 				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null; done
 			done
 
-	sleep 3 # wait for list to generate
-	ENTRIES=`ipset list grepinator | grep "Number of entries" | awk '{print $NF}'`
+	ENTRIES=`ipset list $IPSET_GREPINATOR_TMP | grep "Number of entries" | awk '{print $NF}'`
 	echo  "Number of attacks found using filters: $ENTRIES"
 	ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
 	ipset destroy $IPSET_GREPINATOR_TMP
