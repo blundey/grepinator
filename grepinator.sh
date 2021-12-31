@@ -28,6 +28,7 @@ BLACKLISTS=(
 #   "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/stopforumspam_7d.ipset" # Stopforumspam via Firehol
 )
 ####################################################
+
 banner () {
 echo '
 ____ ____ ____ ___  _ _  _ ____ ___ ____ ____
