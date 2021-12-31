@@ -1,0 +1,15 @@
+#!/bin/bash
+# BIND DNS AMPLIFICATION ATTACK FILTERING
+#
+# Change filter variables to match for your BIND installation
+LOGFILE="/var/log/named/named.log"
+
+# Number of times its logged before banning
+MAXHITS="3"
+
+while read COUNT IP ; do
+        if [ $COUNT -gt $MAXHITS ]
+        then
+                echo $IP;
+        fi
+done < <( grep "rate limit" $LOGFILE | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | sort | uniq -c | sort -n )

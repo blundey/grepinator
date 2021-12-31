@@ -1,0 +1,16 @@
+#!/bin/bash
+# NGINX FILTER FOR 40x and 50x errors
+#
+# Change filter variables to match for your NGINX installation
+LOGFILE="/var/log/nginx/access.log"
+MYIP=`curl -s wtfismyipcom/text`
+
+# Number of times its logged before banning
+MAXHITS="3"
+
+while read COUNT IP ; do
+	if [ $COUNT -gt $MAXHITS ]
+	then
+		echo $IP;
+	fi
+done < <( grep -E 'HTTP/.*" 40[0-9] |HTTP/.*" 50[0-9] ' $LOGFILE | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | grep -v $MYIP | sort | uniq -c | sort -n )
