@@ -19,7 +19,7 @@ BLACKLISTS=(
     "https://www.projecthoneypot.org/list_of_ips.php?t=d&rss=1" # Project Honey Pot Directory of Dictionary Attacker IPs
 #   "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
     "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
-#   "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
+    "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
 #   "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
 #   "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
 #   "https://blocklist.greensnow.co/greensnow.txt" # GreenSnow
@@ -85,16 +85,18 @@ ipset_setup () {
 
 grepinator () {
 
-ipset create "$IPSET_GREPINATOR_TMP" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0
-echo "Grepinating filters..."
-	for FILTER in $(ls -1 $FILTERDIR)
-		do
-			for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout 10800 2>/dev/null; done
-		done
-	ENTRIES=`ipset list grepinator | grep "Number of entries"`
-echo  "$ENTRIES                                          "
-ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
-ipset destroy $IPSET_GREPINATOR_TMP
+	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0
+	echo "Grepinating filters..."
+		for FILTER in $(ls -1 $FILTERDIR)
+			do
+				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout 10800 2>/dev/null; done
+			done
+
+	ENTRIES=`ipset list grepinator | grep "Number of entries" | awk '{print $NF}'`
+	echo  "Number of attacks found using filters: $ENTRIES"
+	echo "Adding $ENTRIES IP's to Grepinators firewall"
+	ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
+	ipset destroy $IPSET_GREPINATOR_TMP
 
 }
 
@@ -116,7 +118,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 	done
 
 	ENTRIES=$(cat $IP_BLACKLIST_TMP | wc -l)
-	echo "Adding $ENTRIES IP's to Grepinators Blocklist.."
+	echo;echo "Number of IP's found in Blacklists: $ENTRIES"
 	ipset create "$IPSET_TMP_BLACKLIST_NAME" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0
 
 	for IP in $(cat $IP_BLACKLIST_TMP)
@@ -126,7 +128,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 		done
 	ipset swap $IPSET_TMP_BLACKLIST_NAME $IPSET_BLACKLIST_NAME
 	ipset destroy $IPSET_TMP_BLACKLIST_NAME
-	echo "Boom!                                                                     "
+	echo "Adding $ENTRIES IP's to Grepinators firewall"
 	rm $IP_BLACKLIST_TMP
 }
 
