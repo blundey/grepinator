@@ -40,7 +40,12 @@ CURL=`whereis curl | awk '{print $2}'`
 	fi
 
         if [ ! -f "$IPTABLES" ]; then
-                echo " [!] iptables not found. Please install ipstables..";
+                echo " [!] iptables not found. Please install iptables..";
+                exit 1;
+	fi
+
+        if [ ! -f "$CURL" ]; then
+                echo " [!] curl not found. Please install curl..";
                 exit 1;
 	fi
 
