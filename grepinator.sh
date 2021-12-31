@@ -105,7 +105,7 @@ grepinator () {
 	echo "Grepinating filters..."
 		for FILTER in $(ls -1 $FILTERDIR)
 			do
-				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null; done
+				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null; sleep 0.1; done
 			done
 
 	ENTRIES=`ipset list $IPSET_GREPINATOR_TMP | grep "Number of entries" | awk '{print $NF}'`

@@ -1,8 +1,8 @@
 #!/bin/bash
-# NGINX FILTER FOR 40x and 50x errors
+# Apache2 FILTER FOR 40x and 50x errors
 #
 # Change filter variables to match for your NGINX installation
-LOGFILE="/var/log/nginx/access.log"
+LOGFILE="/var/log/apache2/access.log"
 MYIP=`curl -s wtfismyip.com/text`
 
 # Number of times its logged before banning
