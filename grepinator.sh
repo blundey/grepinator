@@ -20,9 +20,9 @@ BLACKLISTS=(
 #   "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
     "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
     "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
-#   "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
-#   "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
-#   "https://blocklist.greensnow.co/greensnow.txt" # GreenSnow
+    "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
+    "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
+    "https://blocklist.greensnow.co/greensnow.txt" # GreenSnow
 #   "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset" # Firehol Level 1
 #   "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/stopforumspam_7d.ipset" # Stopforumspam via Firehol
 )
@@ -128,7 +128,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 		done
 	ipset swap $IPSET_TMP_BLACKLIST_NAME $IPSET_BLACKLIST_NAME
 	ipset destroy $IPSET_TMP_BLACKLIST_NAME
-	echo "Adding $ENTRIES IP's to Grepinators firewall"
+	echo "Adding $ENTRIES IP's to Grepinators BL firewall"
 	rm $IP_BLACKLIST_TMP
 }
 
