@@ -69,14 +69,14 @@ CURL=`whereis curl | awk '{print $2}'`
 
 ipset_setup () {
 
-	if ! ipset list -n | grep -eq "^$IPSET_GREPINATOR$"; then
+	if ! ipset list -n | grep -Eq "^$IPSET_GREPINATOR$"; then
 		if ! ipset create "$IPSET_GREPINATOR" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
 		fi
 	fi
 
-	if ! ipset list -n | grep -eq "^$IPSET_BLACKLIST_NAME$"; then
+	if ! ipset list -n | grep -Eq "^$IPSET_BLACKLIST_NAME$"; then
 		if ! ipset create "$IPSET_BLACKLIST_NAME" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
