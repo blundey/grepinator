@@ -68,7 +68,7 @@ GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 	fi
 
         if [ ! -f "$GEOIPLOOKUP" ]; then
-                echo " [!] geoiplookup not found. Please install geoip-common..";
+                echo " [!] geoiplookup not found. Please install geoip-bin..";
                 exit 1;
 	fi
 
