@@ -9,7 +9,7 @@
 
 ######################################################
 # GLOBAL VARS (change as needed)
-FILTERDIR=./filters/
+FILTERDIR="./filters"
 IPSET_GREPINATOR="grepinator"
 IPSET_GREPINATOR_TMP=${IPSET_GREPINATOR}-tmp
 IPSET_BLACKLIST_NAME="grepinatorBL"
@@ -20,9 +20,8 @@ DISPLAY="box" # use mode "column" for older sqlite3
 MAXELEM=131072
 TIMEOUT="10800" # 3 hours
 BLACKLISTS=(
-    "https://www.projecthoneypot.org/list_of_ips.php?t=d&rss=1" # Project Honey Pot Directory of Dictionary Attacker IPs
 #   "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
-#    "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
+    "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
 #    "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
 #    "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
 #    "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
@@ -132,17 +131,17 @@ grepinator () {
 
 	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0
 	echo "Grepinating filters..."
+	ENTRIES=0
 		for FILTER in $(ls -1 $FILTERDIR)
 			do
 #				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null; sleep 0.1; done
-				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; sqlite_log; sleep 0.1; done
+				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; sqlite_log; sleep 0.1; ENTRIES=$((ENTRIES+1)); done
 			done
 
-#	ENTRIES=`ipset list $IPSET_GREPINATOR_TMP | grep "Number of entries" | awk '{print $NF}'`
-#	echo  "Number of attacks found using filters: $ENTRIES"
+	echo  "Number of attacks found using filters: $ENTRIES"
 #	ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
-#	ipset destroy $IPSET_GREPINATOR_TMP
-#	echo "Added $ENTRIES IP's to Grepinators firewall"
+	ipset destroy $IPSET_GREPINATOR_TMP
+	echo "Added $ENTRIES IP's to Grepinators firewall"
 }
 
 blacklist_ips () {
@@ -150,7 +149,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 	for i in "${BLACKLISTS[@]}"
 		do
   			IP_TMP=$(mktemp)
-			(( HTTP_RC=$(curl -L -A "blacklist-update/script/github" --connect-timeout 10 --max-time 10 -o "$IP_TMP" -s -w "%{http_code}" "$i") ))
+			(( HTTP_RC=$(curl -L -A "grepinator" --connect-timeout 10 --max-time 10 -o "$IP_TMP" -s -w "%{http_code}" "$i") ))
 			if (( HTTP_RC == 200 || HTTP_RC == 302 )); then
 				grep -Po '^(?:\d{1,3}\.){3}\d{1,3}(?:/\d{1,2})?' "$IP_TMP" | sed -r 's/^0*([0-9]+)\.0*([0-9]+)\.0*([0-9]+)\.0*([0-9]+)$/\1.\2.\3.\4/' >> "$IP_BLACKLIST_TMP"
 
