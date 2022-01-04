@@ -17,6 +17,6 @@ ____ ____ ____ ___  _ _  _ ____ ___ ____ ____
 Usage : ./grepinator.sh <all|filters|blacklists|status>
 
 all          - Run all filters and retrieve blacklists (Blacklists can take a while to add)
-filters      - Run filters only. Not blacklists
+filters      - Run filters only, not blacklists
 blacklists   - Update and run blacklists only. Should only be ran once a day
 status       - Show status of whats been blocked
