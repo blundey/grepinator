@@ -180,11 +180,11 @@ then
 fi
 
 if [ $1 == "status" ]
-then
-	sqlite3 $DB_PATH/$DB_NAME.db<<END_SQL
+	then
+		sqlite3 $DB_PATH/$DB_NAME.db<<END_SQL
 .headers on
 .mode box
-select * from GREPINATOR;
+select * from GREPINATOR order by id desc limit 10;
 END_SQL
 	exit 0;
 fi
@@ -197,3 +197,4 @@ grepinator
 
 # get blacklist ips and block
 blacklist_ips
+
