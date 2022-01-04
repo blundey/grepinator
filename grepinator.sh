@@ -184,7 +184,7 @@ prereqs
 # Check command args
 if [ $# -lt 1 ]
 then
-        echo "Usage : $0 <all|filters|blacklists>"
+        echo "Usage : $0 <all|filters|blacklists|status>"
 	cat <<_EOF
 
 	all          - Run all filters and retrieve blacklists (Blacklists can take a while to add)
@@ -204,6 +204,7 @@ select * from GREPINATOR order by id desc limit 10;
 END_SQL
 	exit 0;
 fi
+
 
 # Create list and iptables rules
 ipset_setup
