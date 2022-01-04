@@ -1,0 +1,15 @@
+#!/bin/bash                                                                                                                                                 
+# NPM FILTER FOR 40x and 50x errors                                                                                                                    
+#                                                                                                                                                           
+# Change filter variables to match for your NGINX installation                                                                                              
+LOGFILE="/media/appdata/nginx/log/*access.log"                                                                                                              
+                                                                                                                                                            
+# Number of times its logged before banning                                                                                                                 
+MAXHITS="3"                                                                                                                                                 
+                                                                                                                                                            
+while read COUNT IP ; do                                                                                                                                    
+        if [ $COUNT -gt $MAXHITS ]                                                                                                                          
+        then                                                                                                                                                
+                echo $IP;                                                                                                                                   
+        fi                                                                                                                                                  
+done < <( grep -E '] - 40[0-9] |] - 50[0-9] ' $LOGFILE | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | grep -vE '10.0.*|192.168.*' | sort | uniq -c | sort -n )
