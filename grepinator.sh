@@ -113,9 +113,11 @@ ipset_setup () {
 }
 
 sqlite_log () {
+FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
+GEOIP=`geoiplookup $IP | sed 's/.*: //'`
 sqlite3 $DB_PATH/$DB_NAME.db<<END_SQL
 .timeout 30
-INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER', 'United Kingdom', 'Grepinated');
+INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Blocked');
 END_SQL
 }
 
