@@ -45,6 +45,7 @@ prereqs () {
 IPTABLES=`whereis iptables | awk '{print $2}'`
 IPSET=`whereis ipset | awk '{print $2}'`
 CURL=`whereis curl | awk '{print $2}'`
+GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 
 	if [ "$EUID" -ne 0 ]
 		then echo "Please run as root"
@@ -62,6 +63,11 @@ CURL=`whereis curl | awk '{print $2}'`
 	fi
 
         if [ ! -f "$CURL" ]; then
+                echo " [!] curl not found. Please install curl..";
+                exit 1;
+	fi
+
+        if [ ! -f "$GEOIPLOOKUP" ]; then
                 echo " [!] curl not found. Please install curl..";
                 exit 1;
 	fi
