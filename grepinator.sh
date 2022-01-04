@@ -14,6 +14,8 @@ IPSET_GREPINATOR="grepinator"
 IPSET_GREPINATOR_TMP=${IPSET_GREPINATOR}-tmp
 IPSET_BLACKLIST_NAME="grepinatorBL"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
+DB_NAME="grepinator"
+DB_PATH="/var/log/grepinator"
 MAXELEM=131072
 TIMEOUT="10800" # 3 hours
 BLACKLISTS=(
@@ -37,7 +39,6 @@ ____ ____ ____ ___  _ _  _ ____ ___ ____ ____
 
 '
 }
-
 
 prereqs () {
 
@@ -65,6 +66,16 @@ CURL=`whereis curl | awk '{print $2}'`
                 exit 1;
 	fi
 
+	if [ ! -d "$DB_PATH" ]; then
+		mkdir $DB_PATH
+	fi
+
+	if [ ! -f "$DB_PATH/$DB_NAME.db" ]; then
+		sqlite3 $DB_NAME.db <<'END_SQL'
+		.timeout 2000
+		CREATE TABLE IF NOT EXISTS GREPINATOR ( ID INTEGER PRIMARY KEY, Date DATETIME, IP VARCHAR(16), Filter VARCHAR(25), Location VARCHAR(25), Status VARCHAR(25));
+		END_SQL
+	fi
 }
 
 ipset_setup () {
@@ -148,9 +159,16 @@ IP_BLACKLIST_TMP=$(mktemp)
 }
 
 banner
-
 # Make sure we have the right tools
 prereqs
+
+# Check command args
+if [ $# -lt 1 ]
+then
+        echo "Usage : $0 <all|filters|blacklists>"
+        exit
+fi
+
 
 # Create list and iptables rules
 ipset_setup
