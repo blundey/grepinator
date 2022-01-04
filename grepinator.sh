@@ -16,6 +16,7 @@ IPSET_BLACKLIST_NAME="grepinatorBL"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 DB_NAME="grepinator"
 DB_PATH="/var/log/grepinator"
+DISPLAY="box" # use mode "column" for older sqlite3
 MAXELEM=131072
 TIMEOUT="10800" # 3 hours
 BLACKLISTS=(
@@ -184,14 +185,21 @@ prereqs
 if [ $# -lt 1 ]
 then
         echo "Usage : $0 <all|filters|blacklists>"
-        exit
+	cat <<_EOF
+
+	all          - Run all filters and retrieve blacklists (Blacklists can take a while to add)
+	filters      - Run filters only, not blacklists
+	blacklists   - Update and run blacklists only. Should only be ran once a day
+	status       - Show status of whats been blocked
+_EOF
+	exit 0
 fi
 
 if [ $1 == "status" ]
 	then
 		sqlite3 $DB_PATH/$DB_NAME.db<<END_SQL
 .headers on
-.mode box
+.mode $DISPLAY
 select * from GREPINATOR order by id desc limit 10;
 END_SQL
 	exit 0;
