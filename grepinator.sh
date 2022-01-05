@@ -77,12 +77,7 @@ GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 	fi
 
 	if [ ! -f "$DB_PATH/$DB_NAME.db" ]; then
-#DONT INDENT
-sqlite3 $DB_PATH/$DB_NAME.db <<'END_SQL'
-.timeout 2000
-CREATE TABLE IF NOT EXISTS GREPINATOR ( ID INTEGER PRIMARY KEY, Date DATETIME, IP VARCHAR(16), Filter VARCHAR(25), Location VARCHAR(25), Status VARCHAR(25) );
-END_SQL
-#DONT INDENT
+		sqlite3 $DB_PATH/$DB_NAME.db "CREATE TABLE IF NOT EXISTS GREPINATOR ( ID INTEGER PRIMARY KEY, Date DATETIME, IP VARCHAR(16), Filter VARCHAR(25), Location VARCHAR(25), Status VARCHAR(25) );"
 	fi
 }
 
@@ -119,12 +114,11 @@ ipset_setup () {
 }
 
 sqlite_log () {
+
 FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
 GEOIP=`geoiplookup $IP | sed 's/.*: //'`
-sqlite3 $DB_PATH/$DB_NAME.db<<END_SQL
-.timeout 30
-INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Blocked');
-END_SQL
+
+	sqlite3 $DB_PATH/$DB_NAME.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Blocked');"
 }
 
 grepinator () {
@@ -196,12 +190,8 @@ fi
 
 if [ $1 == "status" ]
 	then
-		sqlite3 $DB_PATH/$DB_NAME.db<<END_SQL
-.headers on
-.mode $DISPLAY
-select * from GREPINATOR order by id desc limit 10;
-END_SQL
-	exit 0;
+		sqlite3 -header -$DISPLAY $DB_PATH/$DB_NAME.db "select * from GREPINATOR order by id desc limit 10;"
+		exit 0;
 fi
 
 
