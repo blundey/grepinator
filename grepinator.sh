@@ -16,7 +16,7 @@ IPSET_BLACKLIST_NAME="grepinatorBL"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 DB_NAME="grepinator"
 DB_PATH="/var/log/grepinator"
-DISPLAY="box" # use mode "column" for older sqlite3
+DISPLAY="box" # use modes box or column. Use column for older sqlite3 versions
 MAXELEM=131072
 TIMEOUT="10800" # 3 hours
 BLACKLISTS=(
@@ -115,25 +115,43 @@ ipset_setup () {
 
 sqlite_log () {
 
-FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
-GEOIP=`geoiplookup $IP | sed 's/.*: //'`
+RESULT=`sqlite3 /var/log/grepinator/grepinator.db "select count(*) from GREPINATOR where IP='$IP';"`
 
-	sqlite3 $DB_PATH/$DB_NAME.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Blocked');"
+	if [ $RESULT -eq 0 ]
+	then
+		FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
+		GEOIP=`geoiplookup $IP | sed 's/.*: //'`
+		ENTRIES=$((ENTRIES+1))
+			sqlite3 $DB_PATH/$DB_NAME.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Threat');"
+	fi
+}
+
+filter () {
+
+	echo "Grepinating filters..."
+	ENTRIES=0
+		for FILTER in $(ls -1 $FILTERDIR)
+			do
+				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
+			done
+
+	echo  "Number of new attacks found using filters: $ENTRIES"
 }
 
 grepinator () {
 
 	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0
-	echo "Grepinating filters..."
+	echo "Grepinating IP's..."
 	ENTRIES=0
-		for FILTER in $(ls -1 $FILTERDIR)
+		for IP in $(sqlite3 $DB_PATH/$DB_NAME.db "select IP from GREPINATOR where Status='Threat';")
 			do
-#				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null; sleep 0.1; done
-				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Blocking $IP"\\r; sqlite_log; sleep 0.1; ENTRIES=$((ENTRIES+1)); done
+				echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null;
+				ENTRIES=$((ENTRIES+1))
+				sqlite3 $DB_PATH/$DB_NAME.db "UPDATE GREPINATOR SET Status='Blocked' WHERE IP='$IP';"
+				sleep 0.1;
 			done
 
-	echo  "Number of attacks found using filters: $ENTRIES"
-#	ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
+	ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
 	ipset destroy $IPSET_GREPINATOR_TMP
 	echo "Added $ENTRIES IP's to Grepinators firewall"
 }
@@ -170,37 +188,77 @@ IP_BLACKLIST_TMP=$(mktemp)
 	rm $IP_BLACKLIST_TMP
 }
 
-banner
-# Make sure we have the right tools
-prereqs
+reset() {
+	sqlite3 $DB_PATH/$DB_NAME.db "DELETE FROM GREPINATOR;"
+	echo "Database $DB_NAME has been cleared"
+}
+
+status() {
+	sqlite3 -header -$DISPLAY $DB_PATH/$DB_NAME.db "select * from GREPINATOR order by id desc limit 10;"
+	iptables -nvL INPUT | grep -e 'grepinator src$' | awk '{print "Grepinator Packets Dropped: " $1}'
+	iptables -nvL INPUT | grep -e 'grepinatorBL src$' | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
+	exit 0;
+}
+
+usage() {
+        echo "Usage : $0 <all|filters|blacklists|status>"
+	cat <<_EOF
+
+	all          - Run all filters and blacklists and BLOCK
+	filters      - Run filters and BLOCK
+	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day.
+	log          - Run filters and LOG only. (No blocking occurs)
+	status       - Show status of whats been blocked
+	reset        - Clear the database of logged IP's
+_EOF
+}
 
 # Check command args
 if [ $# -lt 1 ]
 then
-        echo "Usage : $0 <all|filters|blacklists|status>"
-	cat <<_EOF
-
-	all          - Run all filters and retrieve blacklists (Blacklists can take a while to add)
-	filters      - Run filters only, not blacklists
-	blacklists   - Update and run blacklists only. Should only be ran once a day
-	status       - Show status of whats been blocked
-_EOF
+	usage
 	exit 0
 fi
 
-if [ $1 == "status" ]
-	then
-		sqlite3 -header -$DISPLAY $DB_PATH/$DB_NAME.db "select * from GREPINATOR order by id desc limit 10;"
-		exit 0;
-fi
+case "$1" in
 
-
-# Create list and iptables rules
-ipset_setup
-
-# Work our magic by grabbing the ip's and banning them for 3 hours
-grepinator
-
-# get blacklist ips and block
-blacklist_ips
+all)
+	banner
+	prereqs
+	ipset_setup
+	filter
+	grepinator
+	blacklist_ips
+    ;;
+filter)
+	banner
+	prereqs
+	ipset_setup
+	filter
+	grepinator
+    ;;
+blacklists)
+	banner
+	prereqs
+	ipset_setup
+	blacklist_ips
+    ;;
+log)
+	banner
+	prereqs
+	ipset_setup
+	filter
+   ;;
+status) banner
+	status
+   ;;
+reset)
+	banner
+	reset
+   ;;
+*)
+	banner
+	usage
+   ;;
+esac
 
