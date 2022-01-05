@@ -219,6 +219,7 @@ _EOF
 # Check command args
 if [ $# -lt 1 ]
 then
+	banner
 	usage
 	exit 0
 fi
