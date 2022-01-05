@@ -191,6 +191,9 @@ IP_BLACKLIST_TMP=$(mktemp)
 reset() {
 	sqlite3 $DB_PATH/$DB_NAME.db "DELETE FROM GREPINATOR;"
 	echo "Database $DB_NAME has been cleared"
+	ipset flush $IPSET_GREPINATOR
+	ipset flush $IPSET_BLACKLIST_NAME
+	echo "Blocklists cleared"
 }
 
 status() {
@@ -201,7 +204,7 @@ status() {
 }
 
 usage() {
-        echo "Usage : $0 <all|filters|blacklists|status>"
+        echo "Usage : $0 <all|filters|blacklists|log|status|reset>"
 	cat <<_EOF
 
 	all          - Run all filters and blacklists and BLOCK
@@ -230,7 +233,7 @@ all)
 	grepinator
 	blacklist_ips
     ;;
-filter)
+filters)
 	banner
 	prereqs
 	ipset_setup
