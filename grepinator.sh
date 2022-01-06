@@ -90,7 +90,7 @@ GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 ipset_setup () {
 
 	if ! ipset list -n | grep -Eq "^$IPSET_GREPINATOR$"; then
-		if ! ipset create "$IPSET_GREPINATOR" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0; then
+		if ! ipset create "$IPSET_GREPINATOR" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536} timeout 0; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
 		fi
@@ -146,7 +146,7 @@ filter () {
 
 grepinator () {
 
-	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0
+	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536} timeout 0
 	echo "Grepinating IP's..."
 	ENTRIES=0
 		for IP in $(sqlite3 $DB_PATH/$DB_NAME.db "select IP from GREPINATOR where Status='Threat';")
