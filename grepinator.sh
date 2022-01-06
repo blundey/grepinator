@@ -9,7 +9,7 @@
 
 ######################################################
 # GLOBAL VARS (change as needed)
-FILTERDIR="./filters"
+FILTERDIR="/root/grepinator/filters"
 IPSET_GREPINATOR="grepinator"
 IPSET_GREPINATOR_TMP=${IPSET_GREPINATOR}-tmp
 IPSET_BLACKLIST_NAME="grepinatorBL"
