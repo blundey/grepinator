@@ -1,6 +1,6 @@
-#!/bin/bash 
+#!/bin/bash
 #
-# Grepinator v0.0.1-alpha
+# Grepinator v0.0.2-beta
 #
 # Grepinator is a series of bash scripts utilising the power of grep and regex.
 #
@@ -204,6 +204,7 @@ reset() {
 
 status() {
 	sqlite3 -header -$DISPLAY $DB_PATH/$DB_NAME.db "select * from GREPINATOR order by id desc limit 10;"
+	echo
 	iptables -nvL INPUT | grep -e 'grepinator src$' | awk '{print "Grepinator Packets Dropped: " $1}'
 	iptables -nvL INPUT | grep -e 'grepinatorBL src$' | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
 	exit 0;
