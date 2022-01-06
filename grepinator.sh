@@ -138,7 +138,7 @@ filter () {
 	ENTRIES=0
 		for FILTER in $(ls -1 $FILTERDIR)
 			do
-				for IP in $(./$FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
+				for IP in $($FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
 			done
 
 	echo  "Number of new attacks found using filters: $ENTRIES"
