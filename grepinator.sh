@@ -270,6 +270,11 @@ reset)
 	prereqs
 	reset
    ;;
+top)
+	banner
+	prereqs
+	watch ./grepinator.sh status
+   ;;
 *)
 	banner
 	usage
