@@ -259,11 +259,14 @@ log)
 	ipset_setup
 	filter
    ;;
-status) banner
+status)
+	banner
+	prereqs
 	status
    ;;
 reset)
 	banner
+	prereqs
 	reset
    ;;
 *)
