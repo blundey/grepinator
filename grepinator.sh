@@ -45,6 +45,7 @@ prereqs () {
 IPTABLES=`whereis iptables | awk '{print $2}'`
 IPSET=`whereis ipset | awk '{print $2}'`
 CURL=`whereis curl | awk '{print $2}'`
+SQLITE=`whereis sqlite3 | awk '{print $2}'`
 GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 
 	if [ "$EUID" -ne 0 ]
@@ -69,6 +70,11 @@ GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 
         if [ ! -f "$GEOIPLOOKUP" ]; then
                 echo " [!] geoiplookup not found. Please install geoip-bin..";
+                exit 1;
+	fi
+
+        if [ ! -f "$SQLITE" ]; then
+                echo " [!] sqlite3 not found. Please install sqlite3..";
                 exit 1;
 	fi
 
