@@ -12,4 +12,4 @@ while read COUNT IP ; do
 	then
 		echo $IP;
 	fi
-done < <( grep 'sshd' $LOGFILE | egrep -i 'error|fatal|unable' | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | sort | uniq -c | sort -n )
+done < <( grep 'sshd' $LOGFILE | egrep -i 'error|fatal|unable|invalid' | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | sort | uniq -c | sort -n )

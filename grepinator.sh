@@ -17,7 +17,7 @@ IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 DB_NAME="grepinator"
 DB_PATH="/var/log/grepinator"
 DISPLAY="box" # use modes box or column. Use column for older sqlite3 versions
-MAXELEM=131072
+MAXELEM="65536"
 TIMEOUT="10800" # 3 hours
 BLACKLISTS=(
 #    "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
@@ -26,8 +26,6 @@ BLACKLISTS=(
 #    "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
 #    "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
 #    "https://blocklist.greensnow.co/greensnow.txt" # GreenSnow
-#   "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset" # Firehol Level 1
-#   "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/stopforumspam_7d.ipset" # Stopforumspam via Firehol
 )
 ####################################################
 
@@ -90,14 +88,14 @@ GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 ipset_setup () {
 
 	if ! ipset list -n | grep -Eq "^$IPSET_GREPINATOR$"; then
-		if ! ipset create "$IPSET_GREPINATOR" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536} timeout 0; then
+		if ! ipset create "$IPSET_GREPINATOR" hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536}; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
 		fi
 	fi
 
 	if ! ipset list -n | grep -Eq "^$IPSET_BLACKLIST_NAME$"; then
-		if ! ipset create "$IPSET_BLACKLIST_NAME" -exist hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0; then
+		if ! ipset create "$IPSET_BLACKLIST_NAME" hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536} timeout 0; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
 		fi
@@ -146,12 +144,12 @@ filter () {
 
 grepinator () {
 
-	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536} timeout 0
+	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536}
 	echo "Grepinating IP's..."
 	ENTRIES=0
 		for IP in $(sqlite3 $DB_PATH/$DB_NAME.db "select IP from GREPINATOR where Status='Threat';")
 			do
-				echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800} 2>/dev/null;
+				echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP 2>/dev/null;
 				ENTRIES=$((ENTRIES+1))
 				sqlite3 $DB_PATH/$DB_NAME.db "UPDATE GREPINATOR SET Status='Blocked' WHERE IP='$IP';"
 				sleep 0.1;
@@ -193,28 +191,32 @@ IP_BLACKLIST_TMP=$(mktemp)
 	echo "Added $ENTRIES IP's to Grepinators BL firewall"
 	rm $IP_BLACKLIST_TMP
 }
-
+#wheres all the other shit? for the daemon? the loop you wrote before? deleted it and simplified and reused the below functions
 daemon() {
-	shift
-	while true; do
-		trap '' INT
-		for FILTER in $(ls -1 $FILTERDIR)
-			do
-				for IP in $($FILTERDIR/$FILTER 2>/dev/null); do sqlite_log; done
-			done
+	for I in {1..999}; do
+	for FILTER in $(ls -1 $FILTERDIR)
+                        do
+                                for IP in $($FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
+                        done
 
-	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536} timeout 0
+
+	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536}
+        echo "Grepinating IP's..."
+        ENTRIES=0
                 for IP in $(sqlite3 $DB_PATH/$DB_NAME.db "select IP from GREPINATOR where Status='Threat';")
                         do
-                                ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800}
+                                echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR_TMP $IP 2>/dev/null;
+                                ENTRIES=$((ENTRIES+1))
                                 sqlite3 $DB_PATH/$DB_NAME.db "UPDATE GREPINATOR SET Status='Blocked' WHERE IP='$IP';"
+                                sleep 0.1;
                         done
 
         ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
         ipset destroy $IPSET_GREPINATOR_TMP
 
-	sleep 5;
+	sleep 10;
 	done
+	exit 0;
 }
 
 reset() {
@@ -223,6 +225,7 @@ reset() {
 	ipset flush $IPSET_GREPINATOR
 	ipset flush $IPSET_BLACKLIST_NAME
 	echo "Blocklists cleared"
+	exit 0;
 }
 
 status() {
@@ -267,12 +270,14 @@ all)
 	blacklist_ips
     ;;
 fork)
-	prereqs
-	ipset_setup
 	daemon
     ;;
 daemon)
-	nohup setsid $0 fork 2>/var/log/grepinator.err >/var/log/grepinator.log &
+
+#	export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin
+#	umask 022
+#	nohup setsid $0 fork 2>/var/log/grepinator.err >/var/log/grepinator.log &
+	$0 fork
     ;;
 filters)
 	banner
