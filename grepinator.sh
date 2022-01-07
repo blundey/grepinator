@@ -20,8 +20,8 @@ DISPLAY="box" # use modes box or column. Use column for older sqlite3 versions
 MAXELEM=131072
 TIMEOUT="10800" # 3 hours
 BLACKLISTS=(
-#   "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
-    "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
+#    "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
+#    "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
 #    "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
 #    "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
 #    "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
@@ -176,7 +176,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 			else
 				echo >&2 -e "\\nWarning: curl returned HTTP response code $HTTP_RC for URL $i"
 			fi
-		rm -f "$IP_TMP"
+		rm -f "$IP_TMP" "IP_BLACKLIST_TMP"
 	done
 
 	ENTRIES=$(cat $IP_BLACKLIST_TMP | wc -l)
@@ -192,6 +192,29 @@ IP_BLACKLIST_TMP=$(mktemp)
 	ipset destroy $IPSET_TMP_BLACKLIST_NAME
 	echo "Added $ENTRIES IP's to Grepinators BL firewall"
 	rm $IP_BLACKLIST_TMP
+}
+
+daemon() {
+	shift
+	while true; do
+		trap '' INT
+		for FILTER in $(ls -1 $FILTERDIR)
+			do
+				for IP in $($FILTERDIR/$FILTER 2>/dev/null); do sqlite_log; done
+			done
+
+	ipset create "$IPSET_GREPINATOR_TMP" -exist hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536} timeout 0
+                for IP in $(sqlite3 $DB_PATH/$DB_NAME.db "select IP from GREPINATOR where Status='Threat';")
+                        do
+                                ipset add $IPSET_GREPINATOR_TMP $IP timeout ${TIMEOUT:-10800}
+                                sqlite3 $DB_PATH/$DB_NAME.db "UPDATE GREPINATOR SET Status='Blocked' WHERE IP='$IP';"
+                        done
+
+        ipset swap $IPSET_GREPINATOR_TMP $IPSET_GREPINATOR
+        ipset destroy $IPSET_GREPINATOR_TMP
+
+	sleep 5;
+	done
 }
 
 reset() {
@@ -215,11 +238,13 @@ usage() {
 	cat <<_EOF
 
 	all          - Run all filters and blacklists and BLOCK
+	daemon       - Run Grepinator in daemon mode (no output)
 	filters      - Run filters and BLOCK
 	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day.
 	log          - Run filters and LOG only. (No blocking occurs)
 	status       - Show status of whats been blocked
 	reset        - Clear the database of logged IP's
+	top          - Show table of blocked ip's in realtime
 _EOF
 }
 
@@ -240,6 +265,14 @@ all)
 	filter
 	grepinator
 	blacklist_ips
+    ;;
+fork)
+	prereqs
+	ipset_setup
+	daemon
+    ;;
+daemon)
+	nohup setsid $0 fork 2>/var/log/grepinator.err >/var/log/grepinator.log &
     ;;
 filters)
 	banner
@@ -273,7 +306,7 @@ reset)
 top)
 	banner
 	prereqs
-	watch ./grepinator.sh status
+	watch $0 status
    ;;
 *)
 	banner
