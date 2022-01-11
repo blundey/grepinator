@@ -235,7 +235,7 @@ usage() {
 	status       - Show status of whats been blocked
 	reset        - Clear the database of logged IP's
 	stop         - Stop the daemon
-	top          - Show table of blocked ip's in realtime
+	top          - Show table of blocked IP's in realtime
 	version      - Show version
 
 _EOF
