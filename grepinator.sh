@@ -15,7 +15,6 @@ IPSET_BLACKLIST_NAME="grepinatorBL"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 DB_NAME="grepinator"
 DB_PATH="/var/log/grepinator"
-DISPLAY="box" # dont change this. It gets set automatically.
 MAXELEM="65536"
 TIMEOUT="86400" # 24 hours
 BLACKLISTS=(
