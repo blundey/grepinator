@@ -234,7 +234,10 @@ usage() {
 	log          - Run filters and LOG only. (No blocking occurs)
 	status       - Show status of whats been blocked
 	reset        - Clear the database of logged IP's
+	stop         - Stop the daemon
 	top          - Show table of blocked ip's in realtime
+	version      - Show version
+
 _EOF
 
 }
@@ -302,6 +305,11 @@ top)
 	prereqs
 	watch $0 status
    ;;
+
+version)
+	banner
+	echo $VERSION
+  ;;
 *)
 	banner
 	usage
