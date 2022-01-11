@@ -1,10 +1,7 @@
 # Global variables - change as required
 
+CONFIG="./grepinator.globals"
 FILTERDIR="/root/grepinator/filters"
-IPSET_GREPINATOR="grepinator"
-IPSET_GREPINATOR_TMP=${IPSET_GREPINATOR}-tmp
-IPSET_BLACKLIST_NAME="grepinatorBL"
-IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 DB_NAME="grepinator"
 DB_PATH="/var/log/grepinator"
 MAXELEM="65536"

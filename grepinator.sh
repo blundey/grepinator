@@ -8,6 +8,9 @@
 
 ######################################################
 VERSION="0.0.23"
+IPSET_GREPINATOR="grepinator"
+IPSET_BLACKLIST_NAME="grepinator-blacklist"
+IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 source ./grepinator.globals
 ####################################################
 
@@ -61,12 +64,12 @@ GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
                 exit 1;
 	fi
 
-	if [ ! -d "$DB_PATH" ]; then
-		mkdir $DB_PATH
+	if [ ! -d "${DB_PATH:-/var/log/grepinator}" ]; then
+		mkdir ${DB_PATH:-/var/log/grepinator}
 	fi
 
-	if [ ! -f "$DB_PATH/$DB_NAME.db" ]; then
-		sqlite3 $DB_PATH/$DB_NAME.db "CREATE TABLE IF NOT EXISTS GREPINATOR ( ID INTEGER PRIMARY KEY, Date DATETIME, IP VARCHAR(16), Filter VARCHAR(25), Location VARCHAR(25), Status VARCHAR(25) );"
+	if [ ! -f "${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db" ]; then
+		sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "CREATE TABLE IF NOT EXISTS GREPINATOR ( ID INTEGER PRIMARY KEY, Date DATETIME, IP VARCHAR(16), Filter VARCHAR(25), Location VARCHAR(25), Status VARCHAR(25) );"
 	fi
 }
 
@@ -111,7 +114,7 @@ RESULT=`sqlite3 /var/log/grepinator/grepinator.db "select count(*) from GREPINAT
 		FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
 		GEOIP=`geoiplookup $IP | sed 's/.*: //'`
 		ENTRIES=$((ENTRIES+1))
-			sqlite3 $DB_PATH/$DB_NAME.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Threat');"
+			sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Threat');"
 	fi
 }
 
@@ -119,9 +122,9 @@ filter () {
 
 	echo "Grepinating filters..."
 	ENTRIES=0
-		for FILTER in $(ls -1 $FILTERDIR)
+		for FILTER in $(ls -1 ${FILTERDIR:-/etc/grepinator/filters})
 			do
-				for IP in $($FILTERDIR/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
+				for IP in $(${FILTERDIR:-/etc/grepinator/filters}/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
 			done
 
 	echo  "Number of new attacks found using filters: $ENTRIES"
@@ -129,18 +132,18 @@ filter () {
 
 grepinator () {
 
-UPDATE=$(sqlite3 $DB_PATH/$DB_NAME.db "select count(*) from GREPINATOR where Status='Threat';")
+UPDATE=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select count(*) from GREPINATOR where Status='Threat';")
 
 	if [ "$UPDATE" -eq 0 ]; then
 		echo "No IP's to add to ipset. I'll be back.."
 	else
 	echo "Grepinating IP's..."
 	ENTRIES=0
-		for IP in $(sqlite3 $DB_PATH/$DB_NAME.db "select IP from GREPINATOR where Status='Threat';")
+		for IP in $(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select IP from GREPINATOR where Status='Threat';")
 			do
 				echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR $IP 2>/dev/null;
 				ENTRIES=$((ENTRIES+1))
-				sqlite3 $DB_PATH/$DB_NAME.db "UPDATE GREPINATOR SET Status='Blocked' WHERE IP='$IP';"
+				sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "UPDATE GREPINATOR SET Status='Blocked' WHERE IP='$IP';"
 				sleep 0.1;
 			done
 
@@ -172,7 +175,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 	for IP in $(cat $IP_BLACKLIST_TMP)
 		do
 			echo -ne "Blocking IP $IP     "\\r
-			ipset add $IPSET_TMP_BLACKLIST_NAME $IP timeout ${TIMEOUT:-10800} 2>/dev/null
+			ipset add $IPSET_TMP_BLACKLIST_NAME $IP timeout ${TIMEOUT:-0} 2>/dev/null
 		done
 	ipset swap $IPSET_TMP_BLACKLIST_NAME $IPSET_BLACKLIST_NAME
 	ipset destroy $IPSET_TMP_BLACKLIST_NAME
@@ -195,8 +198,8 @@ stop() {
 }
 
 reset() {
-	sqlite3 $DB_PATH/$DB_NAME.db "DELETE FROM GREPINATOR;"
-	echo "Database $DB_NAME has been cleared"
+	sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "DELETE FROM GREPINATOR;"
+	echo "Database ${DB_NAME:-grepinator} has been cleared"
 	ipset flush $IPSET_GREPINATOR
 	ipset flush $IPSET_BLACKLIST_NAME
 	echo "Blocklists cleared"
@@ -216,7 +219,7 @@ SQLITE_VER=$(sqlite3 -version | awk '{print $1}' | tr -d '.,')
 
 status() {
 	db_display_mode
-	sqlite3 -header -$DISPLAY $DB_PATH/$DB_NAME.db "select * from GREPINATOR order by id desc limit 10;"
+	sqlite3 -header -$DISPLAY ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select * from GREPINATOR order by id desc limit 10;"
 	echo
 	iptables -nvL INPUT | grep -e 'grepinator src$' | awk '{print "Grepinator Packets Dropped: " $1}'
 	iptables -nvL INPUT | grep -e 'grepinatorBL src$' | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
