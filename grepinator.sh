@@ -188,6 +188,12 @@ daemon() {
 	done
 }
 
+stop() {
+	PID=$(ps aux | grep "grepinator.sh watcher" | head -n1 | awk '{ print $2 } ')
+	kill -9 $PID
+	echo "Grepiantor stopped. Ill be back.."
+}
+
 reset() {
 	sqlite3 $DB_PATH/$DB_NAME.db "DELETE FROM GREPINATOR;"
 	echo "Database $DB_NAME has been cleared"
@@ -255,9 +261,6 @@ watcher)
 	daemon
     ;;
 daemon)
-
-#	export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin
-#	umask 022
 	nohup setsid $0 watcher 2>/var/log/grepinator.err >/var/log/grepinator.log &
     ;;
 filters)
@@ -289,6 +292,11 @@ reset)
 	prereqs
 	reset
    ;;
+stop)
+	banner
+	prereqs
+	stop
+  ;;
 top)
 	banner
 	prereqs
