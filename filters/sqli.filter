@@ -1,0 +1,15 @@
+#!/bin/bash
+# Basic SQL injection filter
+#
+# Change filter variables to match for your NGINX installation
+LOGFILE="/var/log/apache2/*access.log"
+WHITELIST_IP="'10.0.*|192.168.*'"
+# Number of times its logged before banning
+MAXHITS="3"
+
+while read COUNT IP ; do
+  if [ $COUNT -gt $MAXHITS ]
+  then
+ echo $IP;
+  fi
+done < <( grep -E "\bUNION\b|\bSELECT\b|\bCHAR\b" $LOGFILE | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | grep -vE $WHITELIST_IP | sort | uniq -c | sort -n )

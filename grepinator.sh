@@ -1,41 +1,25 @@
 #!/usr/bin/env /bin/bash
 #
-# Grepinator v0.0.2-beta
+# Grepinator v0.0.23
 #
 # Grepinator is a series of bash scripts utilising the power of grep and regex.
 #
 # See Readme.md for usage and instructions.
 
 ######################################################
-# GLOBAL VARS (change as needed)
-FILTERDIR="/root/grepinator/filters"
-IPSET_GREPINATOR="grepinator"
-IPSET_GREPINATOR_TMP=${IPSET_GREPINATOR}-tmp
-IPSET_BLACKLIST_NAME="grepinatorBL"
-IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
-DB_NAME="grepinator"
-DB_PATH="/var/log/grepinator"
-MAXELEM="65536"
-TIMEOUT="86400" # 24 hours
-BLACKLISTS=(
-    "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
-    "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
-    "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
-    "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
-    "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
-    "https://blocklist.greensnow.co/greensnow.txt" # GreenSnow
-)
+VERSION="0.0.23"
+source ./grepinator.globals
 ####################################################
 
 banner () {
 echo '
 
-   ______                _             __                
-  / ____/_______  ____  (_)___  ____ _/ /_____  _____    
- / / __/ ___/ _ \/ __ \/ / __ \/ __ `/ __/ __ \/ ___/    
-/ /_/ / /  /  __/ /_/ / / / / / /_/ / /_/ /_/ / /        
-\____/_/   \___/ .___/_/_/ /_/\__,_/\__/\____/_/         
-              /_/                                  
+   ______                _             __
+  / ____/_______  ____  (_)___  ____ _/ /_____  _____
+ / / __/ ___/ _ \/ __ \/ / __ \/ __ `/ __/ __ \/ ___/
+/ /_/ / /  /  __/ /_/ / / / / / /_/ / /_/ /_/ / /
+\____/_/   \___/ .___/_/_/ /_/\__,_/\__/\____/_/
+              /_/
 '
 }
 
