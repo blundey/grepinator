@@ -193,8 +193,8 @@ daemon() {
 
 stop() {
 	PID=$(ps aux | grep "grepinator.sh watcher" | head -n1 | awk '{ print $2 } ')
-	kill -9 $PID
-	echo "Grepiantor stopped. Ill be back.."
+	kill -9 $PID 2>/dev/null
+	echo "Grepinator stopped. Ill be back.."
 }
 
 reset() {
@@ -221,8 +221,8 @@ status() {
 	db_display_mode
 	sqlite3 -header -$DISPLAY ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select * from GREPINATOR order by id desc limit 10;"
 	echo
-	iptables -nvL INPUT | grep -e 'grepinator src$' | awk '{print "Grepinator Packets Dropped: " $1}'
-	iptables -nvL INPUT | grep -e 'grepinatorBL src$' | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
+	iptables -nvL INPUT | grep -e  "$IPSET_GREPINATOR src$" | awk '{print "Grepinator Packets Dropped: " $1}'
+	iptables -nvL INPUT | grep -e "$IPSET_BLACKLIST_NAME src$" | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
 	exit 0;
 }
 
