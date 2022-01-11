@@ -1,11 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env /bin/bash
 #
 # Grepinator v0.0.2-beta
 #
 # Grepinator is a series of bash scripts utilising the power of grep and regex.
 #
 # See Readme.md for usage and instructions.
-
 
 ######################################################
 # GLOBAL VARS (change as needed)
@@ -16,25 +15,28 @@ IPSET_BLACKLIST_NAME="grepinatorBL"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
 DB_NAME="grepinator"
 DB_PATH="/var/log/grepinator"
-DISPLAY="box" # use modes box or column. Use column for older sqlite3 versions
+DISPLAY="box" # dont change this. It gets set automatically.
 MAXELEM="65536"
-TIMEOUT="10800" # 3 hours
+TIMEOUT="86400" # 24 hours
 BLACKLISTS=(
-#    "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
-#    "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
-#    "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
-#    "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
-#    "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
-#    "https://blocklist.greensnow.co/greensnow.txt" # GreenSnow
+    "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"  # TOR Exit Nodes
+    "http://danger.rulez.sk/projects/bruteforceblocker/blist.php" # BruteForceBlocker IP List
+    "https://www.spamhaus.org/drop/drop.lasso" # Spamhaus Don't Route Or Peer List (DROP)
+    "https://cinsscore.com/list/ci-badguys.txt" # C.I. Army Malicious IP List
+    "https://lists.blocklist.de/lists/all.txt" # blocklist.de attackers
+    "https://blocklist.greensnow.co/greensnow.txt" # GreenSnow
 )
 ####################################################
 
 banner () {
 echo '
-____ ____ ____ ___  _ _  _ ____ ___ ____ ____
-| __ |__/ |___ |__] | |\ | |__|  |  |  | |__/
-|__] |  \ |___ |    | | \| |  |  |  |__| |  \
 
+   ______                _             __                
+  / ____/_______  ____  (_)___  ____ _/ /_____  _____    
+ / / __/ ___/ _ \/ __ \/ / __ \/ __ `/ __/ __ \/ ___/    
+/ /_/ / /  /  __/ /_/ / / / / / /_/ / /_/ /_/ / /        
+\____/_/   \___/ .___/_/_/ /_/\__,_/\__/\____/_/         
+              /_/                                  
 '
 }
 
@@ -143,13 +145,12 @@ filter () {
 }
 
 grepinator () {
+
 UPDATE=$(sqlite3 $DB_PATH/$DB_NAME.db "select count(*) from GREPINATOR where Status='Threat';")
 
 	if [ "$UPDATE" -eq 0 ]; then
 		echo "No IP's to add to ipset. I'll be back.."
-		exit
-	fi
-
+	else
 	echo "Grepinating IP's..."
 	ENTRIES=0
 		for IP in $(sqlite3 $DB_PATH/$DB_NAME.db "select IP from GREPINATOR where Status='Threat';")
@@ -161,6 +162,7 @@ UPDATE=$(sqlite3 $DB_PATH/$DB_NAME.db "select count(*) from GREPINATOR where Sta
 			done
 
 		echo "Added $ENTRIES IP's to Grepinators firewall"
+	fi
 }
 
 blacklist_ips () {
@@ -194,7 +196,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 	echo "Added $ENTRIES IP's to Grepinators BL firewall"
 	rm $IP_BLACKLIST_TMP
 }
-#wheres all the other shit? for the daemon? the loop you wrote before? deleted it and simplified and reused the below functions
+
 daemon() {
 	while true; do
 	filter
@@ -212,7 +214,19 @@ reset() {
 	exit 0;
 }
 
+db_display_mode () {
+
+SQLITE_VER=$(sqlite3 -version | awk '{print $1}' | tr -d '.,')
+
+        if [ $SQLITE_VER -ge "3330" ]; then
+                DISPLAY="box"
+        else
+                DISPLAY="column"
+        fi
+}
+
 status() {
+	db_display_mode
 	sqlite3 -header -$DISPLAY $DB_PATH/$DB_NAME.db "select * from GREPINATOR order by id desc limit 10;"
 	echo
 	iptables -nvL INPUT | grep -e 'grepinator src$' | awk '{print "Grepinator Packets Dropped: " $1}'
@@ -233,6 +247,7 @@ usage() {
 	reset        - Clear the database of logged IP's
 	top          - Show table of blocked ip's in realtime
 _EOF
+
 }
 
 # Check command args
