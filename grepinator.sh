@@ -192,7 +192,7 @@ daemon() {
 }
 
 stop() {
-	PID=$(ps aux | grep "grepinator.sh watcher" | head -n1 | awk '{ print $2 } ')
+	PID=$(ps aux | grep "grepinator.sh watcher" | grep bash | awk '{ print $2 } ')
 	kill -9 $PID 2>/dev/null
 	echo "Grepinator stopped. Ill be back.."
 }
