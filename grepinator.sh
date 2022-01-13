@@ -90,14 +90,14 @@ ipset_setup () {
 	fi
 
 
-	if ! iptables -nvL INPUT | grep -q "match-set $IPSET_GREPINATOR"; then
+	if ! iptables -nvL INPUT | grep -q "match-set $IPSET_GREPINATOR src"; then
   		if ! iptables -I INPUT 1 -m set --match-set "$IPSET_GREPINATOR" src -j DROP; then
 			echo >&2 "Error: while adding the --match-set ipset rule to iptables"
     			exit 1
 		fi
 	fi
 
-	if ! iptables -nvL INPUT | grep -q "match-set $IPSET_BLACKLIST_NAME"; then
+	if ! iptables -nvL INPUT | grep -q "match-set $IPSET_BLACKLIST_NAME src"; then
   		if ! iptables -I INPUT 2 -m set --match-set "$IPSET_BLACKLIST_NAME" src -j DROP; then
 			echo >&2 "Error: while adding the --match-set ipset rule to iptables"
     			exit 1
