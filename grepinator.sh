@@ -269,7 +269,7 @@ watcher)
 	daemon
     ;;
 daemon)
-	nohup setsid $0 watcher 2>/var/log/grepiantor/grepinator.err >/var/log/grepinator/grepinator.log &
+	nohup setsid $0 watcher 2>/var/log/grepinator/grepinator.err >/var/log/grepinator/grepinator.log &
     ;;
 filters)
 	banner
