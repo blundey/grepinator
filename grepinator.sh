@@ -255,11 +255,6 @@ then
 	exit 0
 fi
 
-#if [ $# -eq 2 ]; then
-#  COUNT=$2
-#fi
-
-
 case "$1" in
 
 all)
@@ -314,7 +309,7 @@ stop)
 top)
 	banner
 	prereqs
-	watch $0 status
+	watch $0 status $2
    ;;
 
 version)
