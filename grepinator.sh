@@ -237,10 +237,10 @@ usage() {
 	filters      - Run filters and BLOCK
 	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day
 	log          - Run filters and LOG only. (No blocking occurs)
-	status [n]   - Show status of whats been blocked. n = number of lines
+	status [n]   - Show status of whats been blocked. n = number of lines to display
 	reset        - Clear the database of logged IP's
 	stop         - Stop the daemon
-	top          - Show table of blocked IP's in realtime
+	top [n]      - Show table of blocked IP's in realtime. n = number of lines to display
 	version      - Show version
 
 _EOF
