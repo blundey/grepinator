@@ -185,6 +185,8 @@ IP_BLACKLIST_TMP=$(mktemp)
 
 daemon() {
 	while true; do
+	prereqs
+	ipset_setup
 	filter
 	grepinator
 	sleep 5;
@@ -219,7 +221,7 @@ SQLITE_VER=$(sqlite3 -version | awk '{print $1}' | tr -d '.,')
 
 status() {
 	db_display_mode
-	sqlite3 -header -$DISPLAY ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select * from GREPINATOR order by id desc limit 10;"
+	sqlite3 -header -$DISPLAY ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select * from GREPINATOR order by id desc limit ${COUNT:-10};"
 	echo
 	iptables -nvL INPUT | grep -e  "$IPSET_GREPINATOR src$" | awk '{print "Grepinator Packets Dropped: " $1}'
 	iptables -nvL INPUT | grep -e "$IPSET_BLACKLIST_NAME src$" | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
@@ -233,9 +235,9 @@ usage() {
 	all          - Run all filters and blacklists and BLOCK
 	daemon       - Run Grepinator in daemon mode (no output)
 	filters      - Run filters and BLOCK
-	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day.
+	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day
 	log          - Run filters and LOG only. (No blocking occurs)
-	status       - Show status of whats been blocked
+	status [n]   - Show status of whats been blocked. n = number of lines
 	reset        - Clear the database of logged IP's
 	stop         - Stop the daemon
 	top          - Show table of blocked IP's in realtime
@@ -253,6 +255,11 @@ then
 	exit 0
 fi
 
+#if [ $# -eq 2 ]; then
+#  COUNT=$2
+#fi
+
+
 case "$1" in
 
 all)
@@ -267,7 +274,7 @@ watcher)
 	daemon
     ;;
 daemon)
-	nohup setsid $0 watcher 2>/var/log/grepinator.err >/var/log/grepinator.log &
+	nohup setsid $0 watcher 2>/var/log/grepiantor/grepinator.err >/var/log/grepinator/grepinator.log &
     ;;
 filters)
 	banner
@@ -291,6 +298,7 @@ log)
 status)
 	banner
 	prereqs
+	COUNT=$2
 	status
    ;;
 reset)
