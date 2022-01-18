@@ -174,7 +174,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 			else
 				echo >&2 -e "\\nWarning: curl returned HTTP response code $HTTP_RC for URL $i"
 			fi
-		rm -f "$IP_TMP" "$IP_BLACKLIST_TMP"
+		rm -f "$IP_TMP"
 	done
 
 	ENTRIES=$(cat $IP_BLACKLIST_TMP | wc -l)
