@@ -11,8 +11,13 @@ VERSION="0.0.23"
 IPSET_GREPINATOR="grepinator"
 IPSET_BLACKLIST_NAME="grepinator-blacklist"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
+
 if [[ ! -f /etc/grepinator/grepinator.conf ]]; then
-	source ./grepinator.conf
+	if [[ ! -f ./grepinator.conf ]]; then
+		echo "Error: grepinator.conf not found."
+	else
+		source ./grepinator.conf
+	fi
 else
 	source /etc/grepinator/grepinator.conf
 fi
