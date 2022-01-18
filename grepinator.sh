@@ -11,7 +11,11 @@ VERSION="0.0.23"
 IPSET_GREPINATOR="grepinator"
 IPSET_BLACKLIST_NAME="grepinator-blacklist"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
-source ./grepinator.globals
+if [[ ! -f /etc/grepinator/grepinator.conf ]]; then
+	source ./grepinator.conf
+else
+	source /etc/grepinator/grepinator.conf
+fi
 ####################################################
 
 banner () {
@@ -165,7 +169,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 			else
 				echo >&2 -e "\\nWarning: curl returned HTTP response code $HTTP_RC for URL $i"
 			fi
-		rm -f "$IP_TMP" "IP_BLACKLIST_TMP"
+		rm -f "$IP_TMP" "$IP_BLACKLIST_TMP"
 	done
 
 	ENTRIES=$(cat $IP_BLACKLIST_TMP | wc -l)
