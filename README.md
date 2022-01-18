@@ -26,13 +26,14 @@ Usage : ./grepinator.sh <all|filters|blacklists|log|status|reset>
 	all          - Run all filters and blacklists and BLOCK
 	daemon       - Run Grepinator in daemon mode (no output)
 	filters      - Run filters and BLOCK
-	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day.
+	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day
 	log          - Run filters and LOG only. (No blocking occurs)
-	status       - Show status of whats been blocked
+	status [n]   - Show status of whats been blocked. n = number of lines to display
 	reset        - Clear the database of logged IP's
 	stop         - Stop the daemon
-	top          - Show table of blocked ip's in realtime
+	top [n]      - Show table of blocked IP's in realtime. n = number of lines to display
 	version      - Show version
+
 	
 ┌──(root💀zombie)-[~/grepinator]
 └─# ./grepinator.sh all
