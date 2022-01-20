@@ -37,11 +37,11 @@ echo '
 
 prereqs () {
 
-IPTABLES=`whereis iptables | awk '{print $2}'`
-IPSET=`whereis ipset | awk '{print $2}'`
-CURL=`whereis curl | awk '{print $2}'`
-SQLITE=`whereis sqlite3 | awk '{print $2}'`
-GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
+IPTABLES=$(whereis iptables | awk '{print $2}')
+IPSET=$(whereis ipset | awk '{print $2}')
+CURL=$(whereis curl | awk '{print $2}')
+SQLITE=$(whereis sqlite3 | awk '{print $2}')
+GEOIPLOOKUP=$(whereis geoiplookup | awk '{print $2}')
 
 	if [ "$EUID" -ne 0 ]
 		then echo "Please run as root"
@@ -132,17 +132,17 @@ valid_ip () {
 
 sqlite_log () {
 
-RESULT=`sqlite3 /var/log/grepinator/grepinator.db "select count(*) from GREPINATOR where IP='$IP';"`
+RESULT=$(sqlite3 /var/log/grepinator/grepinator.db "select count(*) from GREPINATOR where IP='$IP';")
 
 	if [ $RESULT -eq 0 ]; then
 		WHITELISTED=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT count(*) FROM GREPINATOR WHERE IP='$IP' AND Status='Whitelisted';")
 		if [ "$WHITELISTED" -eq 0 ]; then
-			FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
+			FILTER_NAME=$(echo $FILTER | sed 's/.filter$//')
 
-			if [[ $IP =~ ^10.* || $IP =~ ^192.168.* || $IP =~ ^172.[16..32].* ]]; then
+			if [[ $IP =~ '^10\..*' || $IP =~ ^192.168.* || $IP =~ ^172.[16..32].* ]]; then
 				GEOIP="Private IP Address"
 			else
-				GEOIP=`geoiplookup $IP | sed 's/.*: //'`
+				GEOIP=$(geoiplookup $IP | sed 's/.*: //')
 			fi
 
 			ENTRIES=$((ENTRIES+1))
@@ -224,7 +224,7 @@ daemon() {
 		ipset_setup
 		filter
 		grepinator
-		sleep 5;
+		sleep ${INTERVAL:-5};
 	done
 }
 
@@ -282,10 +282,10 @@ whitelist () {
 				echo "Done."
 			fi
 		else
-			if [[ $CIDR =~ ^10.* || $CIDR =~ ^192.168.* || $CIDR =~ ^172.[16..32].* ]]; then
+			if [[ $CIDR =~ '^10\..*' || $CIDR =~ ^192.168.* || $CIDR =~ ^172.[16..32].* ]]; then
                                 GEOIP="Private IP Address"
                         else
-                                GEOIP=`geoiplookup $CIDR | sed 's/.*: //'`
+                                GEOIP=$(geoiplookup $CIDR | sed 's/.*: //')
                         fi
 			echo "Whitelisting $CIDR.."
 			sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$CIDR', 'Manual', '$GEOIP', 'Whitelisted');"
