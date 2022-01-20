@@ -216,7 +216,7 @@ IP_BLACKLIST_TMP=$(mktemp)
 	rm $IP_BLACKLIST_TMP
 }
 
-daemon() {
+daemon () {
 
 	echo $$ > /var/run/grepinator.pid
 	while true; do
@@ -228,7 +228,7 @@ daemon() {
 	done
 }
 
-stop() {
+stop () {
 	if [ -f /var/run/grepinator.pid ]; then
 		PID=$(cat /var/run/grepinator.pid)
 		kill -9 $PID 2>/dev/null
@@ -239,7 +239,7 @@ stop() {
 	fi
 }
 
-reset() {
+reset () {
 	sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "DELETE FROM GREPINATOR;"
 	echo "Database ${DB_NAME:-grepinator} has been cleared"
 	ipset flush $IPSET_GREPINATOR
@@ -259,13 +259,19 @@ SQLITE_VER=$(sqlite3 -version | awk '{print $1}' | tr -d '.,')
         fi
 }
 
-status() {
+status () {
 	db_display_mode
 	sqlite3 -header -$DISPLAY ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT * from GREPINATOR ORDER BY id DESC LIMIT ${COUNT:-10};"
 	echo
+	for F in $(ls -1 $FILTER_DIR); do 
+		NAME=$(echo $F | sed 's/.filter//')
+		local COUNT=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT count(*) from GREPINATOR WHERE Filter='$NAME';")
+		if [ "$COUNT" -gt 0 ]; then
+			echo "Attacks detected by $F: $COUNT"
+		fi
+	done
 	iptables -nvL INPUT | grep -e  "$IPSET_GREPINATOR src$" | awk '{print "Grepinator Packets Dropped: " $1}'
 	iptables -nvL INPUT | grep -e "$IPSET_BLACKLIST_NAME src$" | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
-	exit 0;
 }
 
 
