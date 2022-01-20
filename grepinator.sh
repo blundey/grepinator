@@ -1,13 +1,13 @@
 #!/usr/bin/env /bin/bash
 #
-# Grepinator v0.0.23
+# Grepinator v0.0.70
 #
 # Grepinator is a series of bash scripts utilising the power of grep and regex.
 #
 # See Readme.md for usage and instructions.
 
 ######################################################
-VERSION="0.0.23"
+VERSION="0.0.70"
 IPSET_GREPINATOR="grepinator"
 IPSET_BLACKLIST_NAME="grepinator-blacklist"
 IPSET_TMP_BLACKLIST_NAME=${IPSET_BLACKLIST_NAME}-tmp
@@ -85,7 +85,7 @@ GEOIPLOOKUP=`whereis geoiplookup | awk '{print $2}'`
 ipset_setup () {
 
 	if ! ipset list -n | grep -Eq "^$IPSET_GREPINATOR$"; then
-		if ! ipset create "$IPSET_GREPINATOR" hash:ip family inet hashsize 2048 maxelem ${MAXELEM:-65536}; then
+		if ! ipset create "$IPSET_GREPINATOR" hash:net family inet hashsize 16384 maxelem ${MAXELEM:-65536}; then
 			echo >&2 "Error: while creating the initial ipset"
 			exit 1
 		fi
@@ -114,16 +114,40 @@ ipset_setup () {
 	fi
 }
 
+valid_ip () {
+
+	local  ip=$1
+	local  STAT=1
+
+	if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+		OIFS=$IFS
+		IFS='.'
+		ip=($ip)
+		IFS=$OIFS
+		[[ ${ip[0]} -le 255 && ${ip[1]} -le 255 && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+        	STAT=$?
+	fi
+    return $STAT
+}
+
 sqlite_log () {
 
 RESULT=`sqlite3 /var/log/grepinator/grepinator.db "select count(*) from GREPINATOR where IP='$IP';"`
 
-	if [ $RESULT -eq 0 ]
-	then
-		FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
-		GEOIP=`geoiplookup $IP | sed 's/.*: //'`
-		ENTRIES=$((ENTRIES+1))
+	if [ $RESULT -eq 0 ]; then
+		WHITELISTED=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT count(*) FROM GREPINATOR WHERE IP='$IP' AND Status='Whitelisted';")
+		if [ "$WHITELISTED" -eq 0 ]; then
+			FILTER_NAME=`echo $FILTER | sed 's/.filter$//'`
+
+			if [[ $IP =~ ^10.* || $IP =~ ^192.168.* || $IP =~ ^172.[16..32].* ]]; then
+				GEOIP="Private IP Address"
+			else
+				GEOIP=`geoiplookup $IP | sed 's/.*: //'`
+			fi
+
+			ENTRIES=$((ENTRIES+1))
 			sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$IP', '$FILTER_NAME', '$GEOIP', 'Threat');"
+		fi
 	fi
 }
 
@@ -148,7 +172,7 @@ UPDATE=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "sele
 	else
 	echo "Grepinating IP's..."
 	ENTRIES=0
-		for IP in $(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select IP from GREPINATOR where Status='Threat';")
+		for IP in $(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT IP FROM GREPINATOR WHERE Status='Threat';")
 			do
 				echo -ne "Blocking $IP"\\r; ipset add $IPSET_GREPINATOR $IP 2>/dev/null;
 				ENTRIES=$((ENTRIES+1))
@@ -193,19 +217,26 @@ IP_BLACKLIST_TMP=$(mktemp)
 }
 
 daemon() {
+
+	echo $$ > /var/run/grepinator.pid
 	while true; do
-	prereqs
-	ipset_setup
-	filter
-	grepinator
-	sleep 5;
+		prereqs
+		ipset_setup
+		filter
+		grepinator
+		sleep 5;
 	done
 }
 
 stop() {
-	PID=$(ps aux | grep "grepinator.sh watcher" | grep bash | awk '{ print $2 } ')
-	kill -9 $PID 2>/dev/null
-	echo "Grepinator stopped. Ill be back.."
+	if [ -f /var/run/grepinator.pid ]; then
+		PID=$(cat /var/run/grepinator.pid)
+		kill -9 $PID 2>/dev/null
+		rm /var/run/grepinator.pid
+		echo "Grepinator stopped. Ill be back.."
+	else
+		echo "Grepinator not running. Nothing to kill."
+	fi
 }
 
 reset() {
@@ -213,7 +244,7 @@ reset() {
 	echo "Database ${DB_NAME:-grepinator} has been cleared"
 	ipset flush $IPSET_GREPINATOR
 	ipset flush $IPSET_BLACKLIST_NAME
-	echo "Blocklists cleared"
+	echo "IPset Blocklists cleared"
 	exit 0;
 }
 
@@ -230,27 +261,75 @@ SQLITE_VER=$(sqlite3 -version | awk '{print $1}' | tr -d '.,')
 
 status() {
 	db_display_mode
-	sqlite3 -header -$DISPLAY ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "select * from GREPINATOR order by id desc limit ${COUNT:-10};"
+	sqlite3 -header -$DISPLAY ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT * from GREPINATOR ORDER BY id DESC LIMIT ${COUNT:-10};"
 	echo
 	iptables -nvL INPUT | grep -e  "$IPSET_GREPINATOR src$" | awk '{print "Grepinator Packets Dropped: " $1}'
 	iptables -nvL INPUT | grep -e "$IPSET_BLACKLIST_NAME src$" | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
 	exit 0;
 }
 
+
+whitelist () {
+
+	if [[ "$AOR" == "add"  && $CIDR =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+		EXISTS=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT count(*) FROM GREPINATOR WHERE IP='$CIDR';")
+		if [ "$EXISTS" -eq 1 ]; then
+			STATUS=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT Status FROM GREPINATOR WHERE IP='$CIDR';")
+			if [ "$STATUS" == "Blocked" ] || [ "$STATUS" == "Threat" ]; then
+				echo "Whitelisting $CIDR.."
+				sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "UPDATE GREPINATOR SET Status='Whitelisted' WHERE IP='$CIDR';"
+				ipset del $IPSET_GREPINATOR $CIDR
+				echo "Done."
+			fi
+		else
+			if [[ $CIDR =~ ^10.* || $CIDR =~ ^192.168.* || $CIDR =~ ^172.[16..32].* ]]; then
+                                GEOIP="Private IP Address"
+                        else
+                                GEOIP=`geoiplookup $CIDR | sed 's/.*: //'`
+                        fi
+			echo "Whitelisting $CIDR.."
+			sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "INSERT INTO GREPINATOR (Date, IP, Filter, Location, Status) VALUES (datetime('now', 'localtime'), '$CIDR', 'Manual', '$GEOIP', 'Whitelisted');"
+			unset GEOIP
+			echo "Done."
+		fi
+
+
+	elif [[ "$AOR" == "remove" && $CIDR =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+		EXISTS=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT count(*) FROM GREPINATOR WHERE IP='$CIDR';")
+		if [ "$EXISTS" -eq 1 ]; then
+			STATUS=$(sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "SELECT Status FROM GREPINATOR WHERE IP='$CIDR';")
+			if [ "$STATUS" == "Whitelisted" ]; then
+				echo "Removing $CIDR from whitelist.."
+				sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "UPDATE GREPINATOR SET Status='Blocked' WHERE IP='$CIDR';"
+				ipset add $IPSET_GREPINATOR $CIDR
+			fi
+		else
+			echo "Remove failed. IP not found."
+		fi
+
+
+	else
+		echo "Option not recognised. Must use add or remove followed by the IP or CIDR"
+	fi
+}
+
+
+
 usage() {
-        echo "Usage : $0 <all|filters|blacklists|log|status|reset>"
+        echo "Usage : $0 <choose from options below>"
 	cat <<_EOF
 
-	all          - Run all filters and blacklists and BLOCK
-	daemon       - Run Grepinator in daemon mode (no output)
-	filters      - Run filters and BLOCK
-	blacklists   - Update and block blacklisted IP's only. Should only be ran once a day
-	log          - Run filters and LOG only. (No blocking occurs)
-	status [n]   - Show status of whats been blocked. n = number of lines to display
-	reset        - Clear the database of logged IP's
-	stop         - Stop the daemon
-	top [n]      - Show table of blocked IP's in realtime. n = number of lines to display
-	version      - Show version
+	all          			- Run all filters and blacklists and BLOCK
+	daemon       			- Run Grepinator in daemon mode (no output)
+	filters      			- Run filters and BLOCK
+	blacklists   			- Update and block blacklisted IP's only. Should only be ran once a day
+	log          			- Run filters and LOG only. (No blocking occurs)
+	status [n]   			- Show status of whats been blocked. n = number of lines to display
+	reset        			- Clear the database of logged IP's
+	stop         			- Stop the daemon
+	top [n]      			- Show table of blocked IP's in realtime. n = number of lines to display
+	whitelist <add|remove> <ip> 	- Add or remote IP from the whitelist
+	version      			- Show version
 
 _EOF
 
@@ -320,7 +399,13 @@ top)
 	prereqs
 	watch $0 status $2
    ;;
-
+whitelist)
+	banner
+	prereqs
+	AOR=$2
+	CIDR=$3
+	whitelist
+  ;;
 version)
 	banner
 	echo $VERSION
