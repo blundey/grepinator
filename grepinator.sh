@@ -228,6 +228,15 @@ daemon () {
 	done
 }
 
+report () {
+actionban = curl --fail 'https://api.abuseipdb.com/api/v2/report' \
+    -H 'Accept: application/json' \
+    -H 'Key: <abuseipdb_apikey>' \
+    --data-urlencode 'comment=IP detected by Grepinator performing mutiple attacks.' \
+    --data-urlencode 'ip=$IP' \
+    --data 'categories=https://www.abuseipdb.com/categories>'
+}
+
 stop () {
 	if [ -f /var/run/grepinator.pid ]; then
 		PID=$(cat /var/run/grepinator.pid)
