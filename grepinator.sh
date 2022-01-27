@@ -155,9 +155,9 @@ filter () {
 
 	echo "Grepinating filters..."
 	ENTRIES=0
-		for FILTER in $(ls -1 ${FILTERDIR:-/etc/grepinator/filters})
+		for FILTER in $(ls -1 ${FILTER_DIR:-/etc/grepinator/filters})
 			do
-				for IP in $(${FILTERDIR:-/etc/grepinator/filters}/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
+				for IP in $(${FILTER_DIR:-/etc/grepinator/filters}/$FILTER 2>/dev/null); do echo -ne "Checking $IP"\\r; sqlite_log; sleep 0.1; done
 			done
 
 	echo  "Number of new attacks found using filters: $ENTRIES"
