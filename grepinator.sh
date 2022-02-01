@@ -231,7 +231,7 @@ daemon () {
 report () {
 actionban = curl --fail 'https://api.abuseipdb.com/api/v2/report' \
     -H 'Accept: application/json' \
-    -H 'Key: <abuseipdb_apikey>' \
+    -H 'Key: $APIKEY' \
     --data-urlencode 'comment=IP detected by Grepinator performing mutiple attacks.' \
     --data-urlencode 'ip=$IP' \
     --data 'categories=https://www.abuseipdb.com/categories>'
@@ -293,7 +293,7 @@ whitelist () {
 			if [ "$STATUS" == "Blocked" ] || [ "$STATUS" == "Threat" ]; then
 				echo "Whitelisting $CIDR.."
 				sqlite3 ${DB_PATH:-/var/log/grepinator}/${DB_NAME:-grepinator}.db "UPDATE GREPINATOR SET Status='Whitelisted' WHERE IP='$CIDR';"
-				ipset del $IPSET_GREPINATOR $CIDR
+				ipset del $IPSET_GREPINATOR $CIDR 2>/dev/null
 				echo "Done."
 			fi
 		else
@@ -343,7 +343,7 @@ usage() {
 	reset        			- Clear the database of logged IP's
 	stop         			- Stop the daemon
 	top [n]      			- Show table of blocked IP's in realtime. n = number of lines to display
-	whitelist <add|remove> <ip> 	- Add or remote IP from the whitelist
+	whitelist <add|remove> <ip> 	- Add or remove IP from the whitelist
 	version      			- Show version
 
 _EOF
