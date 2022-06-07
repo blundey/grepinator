@@ -279,6 +279,8 @@ status () {
 			echo "Attacks detected by $F: $COUNT"
 		fi
 	done
+        echo -n "Country that hates you the most: "
+	sqlite3 /var/log/grepinator/grepinator.db  "select Location from GREPINATOR;" | sort | uniq -c | sort -n | tail -n 1 | tr '[0-9]' ' ' | sed 's/ //g'
 	iptables -nvL INPUT | grep -e  "$IPSET_GREPINATOR src$" | awk '{print "Grepinator Packets Dropped: " $1}'
 	iptables -nvL INPUT | grep -e "$IPSET_BLACKLIST_NAME src$" | awk '{print "Grepinator Blacklists Packets Dropped: " $1}'
 }
