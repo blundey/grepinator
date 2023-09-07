@@ -1,4 +1,4 @@
-#!/usr/bin/env /bin/bash
+#!/usr/bin/env bash
 #
 # Grepinator v0.0.70
 #
